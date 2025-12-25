@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Celebrity Recognition & Q&A</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-indigo-950 to-indigo-900 text-white min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 py-10 space-y-8 animate-fadeIn">
+
+    <!-- Header -->
+    <header class="text-center space-y-2">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-rose-400 tracking-tight">
+        🌟 Celebrity Detector + Q&A
+      </h1>
+      <p class="text-sm md:text-base text-indigo-200">
+        Upload an image to detect the celebrity and ask questions based on verified context.
+      </p>
+    </header>
+
+    <!-- Upload Card -->
+    <section class="bg-indigo-900/60 border border-indigo-700/60 rounded-2xl p-6 shadow-lg">
+      <form method="POST" enctype="multipart/form-data" class="flex flex-col items-center gap-4">
+        <label class="w-full max-w-md">
+          <span class="block text-sm text-indigo-200 mb-2">Upload image</span>
+          <input
+            type="file"
+            name="image"
+            accept="image/*"
+            required
+            class="block w-full text-sm text-indigo-200 file:mr-4 file:py-2 file:px-4
+                   file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                   file:bg-rose-500 file:text-black hover:file:bg-rose-600
+                   bg-indigo-950/40 border border-indigo-700 rounded-xl cursor-pointer"
+          />
+        </label>
+
+        <button
+          type="submit"
+          class="bg-rose-500 hover:bg-rose-600 px-6 py-2 rounded-xl text-black font-semibold shadow-md transition"
+        >
+          Detect Celebrity
+        </button>
+
+        <p class="text-xs text-indigo-300">
+          Tip: clear face images work best (good lighting + front angle).
+        </p>
+      </form>
+    </section>
+
+    {% if result_img_data %}
+
+    <!-- Results -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+
+      <!-- Image Preview -->
+      <div class="bg-indigo-900/60 border border-indigo-700/60 rounded-2xl p-3 shadow-lg">
+        <div class="rounded-xl overflow-hidden">
+          <img
+            src="data:image/jpeg;base64,{{ result_img_data }}"
+            alt="Detected Celebrity"
+            class="rounded-xl w-full object-cover"
+          />
+        </div>
+        <p class="text-xs text-indigo-300 mt-3 text-center">
+          Detected face highlighted (if found)
+        </p>
+      </div>
+
+      <!-- Info + Q&A -->
+      <div class="bg-indigo-900/60 border border-indigo-700/60 rounded-2xl p-6 shadow-lg space-y-6">
+
+        <!-- Detected Info -->
+        <div>
+          <h2 class="text-2xl font-semibold text-rose-300 mb-4">📄 Detected Info</h2>
+
+          <div class="bg-indigo-950/50 p-4 rounded-xl border border-indigo-700/70 space-y-2 text-sm">
+            {% set achievements_open = false %}
+            {% for line in celebrity_information.splitlines() %}
+              {% if "**Full Name**" in line %}
+                <p><strong class="text-rose-400">👤 Full Name:</strong> {{ line.split(':', 1)[-1].strip() }}</p>
+
+              {% elif "**Profession**" in line %}
+                <p><strong class="text-rose-400">🎭 Profession:</strong> {{ line.split(':', 1)[-1].strip() }}</p>
+
+              {% elif "**Nationality**" in line %}
+                <p><strong class="text-rose-400">🌍 Nationality:</strong> {{ line.split(':', 1)[-1].strip() }}</p>
+
+              {% elif "**Famous For**" in line %}
+                <p><strong class="text-rose-400">⭐ Famous For:</strong> {{ line.split(':', 1)[-1].strip() }}</p>
+
+              {% elif "**Top Achievements**" in line %}
+                <p><strong class="text-rose-400">🏆 Top Achievements:</strong></p>
+                <ul class="list-disc list-inside text-rose-200 ml-2 space-y-1">
+                {% set achievements_open = true %}
+
+              {% elif line.startswith("  - ") %}
+                <li>{{ line.replace('  - ', '') }}</li>
+
+              {% endif %}
+            {% endfor %}
+            {% if achievements_open %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Ask Form -->
+        <div class="pt-2 border-t border-indigo-700/60">
+          <h3 class="text-lg font-semibold text-indigo-100 mb-3">💬 Ask a Question</h3>
+
+          <form method="POST" class="space-y-3">
+            <input type="hidden" name="celebrity_name" value="{{ celebrity_information.splitlines()[0].split(':')[-1] }}">
+            <input type="hidden" name="celebrity_information" value="{{ celebrity_information }}">
+            <input type="hidden" name="result_img_data" value="{{ result_img_data }}">
+
+            <input
+              name="question"
+              placeholder="Ask something about this celebrity..."
+              required
+              class="p-3 w-full bg-indigo-950/40 border border-indigo-700 rounded-xl text-white text-sm
+                     placeholder:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-rose-500/60"
+            />
+
+            <button
+              type="submit"
+              class="bg-rose-600 hover:bg-rose-700 px-6 py-2 rounded-xl font-semibold transition"
+            >
+              Ask
+            </button>
+          </form>
+
+          {% if answer %}
+            <div class="answer-box mt-5 text-rose-200 text-sm">
+              <strong class="text-white">Answer:</strong><br>{{ answer }}
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </section>
+
+    {% endif %}
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-indigo-300 pt-6">
+      Built with Flask + Tailwind • Celebrity Recognition & Q&A
+    </footer>
+
+  </div>
+</body>
+</html>
